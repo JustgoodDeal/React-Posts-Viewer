@@ -65,6 +65,7 @@ const App = () => {
     };
 
     const changeFiltersFunc = ({ postCategoryFilter, postDateFilter, votesNumberFilter }) => {
+        setPage(1);
         setFilters({postCategoryFilter, postDateFilter, votesNumberFilter})
     };
 

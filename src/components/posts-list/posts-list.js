@@ -5,7 +5,7 @@ import './posts-list.css';
 
 const PostsList = ({ posts, page, perPage }) => {
 
-    let postNumber =(page - 1) * perPage;
+    let postNumber = (page - 1) * perPage;
 
     const postsElements = posts.map((item) => {
         const { unique_id, username, user_karma, user_cake_day, post_karma, comment_karma, post_date, comments_number,
