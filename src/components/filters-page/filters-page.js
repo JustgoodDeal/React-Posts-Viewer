@@ -1,12 +1,9 @@
-import React, { useContext } from 'react';
-import FiltersContext from '../filters-context';
+import React from 'react';
 
 import './filters-page.css';
 
 
 const FiltersPage = ({ changeFiltersFunc }) => {
-
-    const { postCategoryFilter, postDateFilter, votesNumberFilter } = useContext(FiltersContext);
 
     const onFiltersSubmit = () => {
         const postCategoryFilter = document.getElementById('post-category').value;
@@ -34,18 +31,15 @@ const FiltersPage = ({ changeFiltersFunc }) => {
 
                             <div className="input-group input-group-sm mb-3">
                                 <span className="input-group-text">Post category</span>
-                                <input type="text" id="post-category" className="form-control" aria-label="Sizing example input"
-                                       defaultValue={postCategoryFilter} />
+                                <input type="text" id="post-category" className="form-control" aria-label="Sizing example input"/>
                             </div>
                             <div className="input-group input-group-sm mb-3">
                                 <span className="input-group-text">Post date</span>
-                                <input type="text" id="post-date" className="form-control" aria-label="Sizing example input"
-                                       defaultValue={postDateFilter} />
+                                <input type="text" id="post-date" className="form-control" aria-label="Sizing example input"/>
                             </div>
                             <div className="input-group input-group-sm mb-3">
                                 <span className="input-group-text">Number of votes</span>
-                                <input type="text" id="votes-number" className="form-control" aria-label="Sizing example input"
-                                       defaultValue={votesNumberFilter} />
+                                <input type="text" id="votes-number" className="form-control" aria-label="Sizing example input"/>
                             </div>
 
                         </div>

@@ -1,6 +1,5 @@
-import React, { useCallback, useState, useEffect} from 'react';
+import React, { Component } from 'react';
 import FiltersBlock from '../filters-block';
-import FiltersContext from '../filters-context';
 import Header from '../header';
 import PostsList from '../posts-list';
 import Pagination from '../pagination';
@@ -8,19 +7,22 @@ import Pagination from '../pagination';
 import './app.css';
 
 
-const App = () => {
+export default class App extends Component {
 
-    const [posts, setPosts] = useState([]);
-    const [page, setPage] = useState(1);
-    const [pages, setPages] = useState(1);
-    const [perPage, setPerPage] = useState(25);
-    const [filters, setFilters] = useState({
-        postCategoryFilter: '',
-        postDateFilter: '',
-        votesNumberFilter: ''
-    });
+    state = {
+        posts: [],
+        page: 1,
+        pages: 1,
+        perPage: 25,
+        filters: {
+            postCategoryFilter: '',
+            postDateFilter: '',
+            votesNumberFilter: ''
+        }
+    };
 
-    const defineURL = useCallback(() => {
+    defineURL = () => {
+        const { page, perPage, filters } = this.state;
         let url = `http://localhost:8087/posts?page=${page}&per_page=${perPage}`;
         const filterNameMap = {
             postCategoryFilter: 'post_category',
@@ -35,73 +37,91 @@ const App = () => {
             }
         }
         return url
-    }, [ page, perPage, filters ]);
+    };
 
-    const getPostsList = useCallback(() => {
-        const url = defineURL();
+    getPostsList = () => {
+        const url = this.defineURL();
         fetch(url)
             .then(res => res.json())
             .then(data => {
                 const { posts, page, pages } = data;
-                setPosts(posts);
-                setPage(page);
-                setPages(pages);
+                this.setState({
+                    posts,
+                    page,
+                    pages
+                });
             })
-            .catch(() => {setPosts([]);
+            .catch(() => this.setState({posts:[]}))
+    };
+
+    componentDidMount() {
+        this.getPostsList()
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (prevState.page !== this.state.page ||
+            prevState.perPage !== this.state.perPage ||
+            JSON.stringify(prevState.filters) !== JSON.stringify(this.state.filters)) {
+            this.getPostsList()
+        }
+    }
+
+    changePageFunc = (page) => {
+        this.setState({page});
+    };
+
+    changePerPageFunc = (perPage) => {
+        this.setState({
+            page: 1,
+            perPage
         });
-    }, [ defineURL ]);
-
-    useEffect(() => {
-        getPostsList();
-    }, [ getPostsList ]);
-
-    const changePageFunc = (pageNumber) => {
-        setPage(pageNumber);
     };
 
-    const changePerPageFunc = (perPageValue) => {
-        setPage(1);
-        setPerPage(perPageValue);
+    changeFiltersFunc = ({ postCategoryFilter, postDateFilter, votesNumberFilter }) => {
+        this.setState({
+            page: 1,
+            filters: {
+                postCategoryFilter,
+                postDateFilter,
+                votesNumberFilter
+            }
+        });
     };
 
-    const changeFiltersFunc = ({ postCategoryFilter, postDateFilter, votesNumberFilter }) => {
-        setFilters({postCategoryFilter, postDateFilter, votesNumberFilter})
-    };
+    render() {
+        const { posts, page, pages, perPage } = this.state;
 
-    return (
-        <div>
-            <Header />
-            <FiltersContext.Provider value={filters}>
+        return (
+            <div>
+                <Header />
                 <FiltersBlock
                     perPage={perPage}
-                    changePerPageFunc={changePerPageFunc}
-                    changeFiltersFunc={changeFiltersFunc} />
-            </FiltersContext.Provider>
-            <table className="table table-striped">
-                <thead>
-                <tr className="table-primary">
-                    <th scope="col">Post number</th>
-                    <th scope="col">Username</th>
-                    <th scope="col">User karma</th>
-                    <th scope="col">User cake day</th>
-                    <th scope="col">Post karma</th>
-                    <th scope="col">Comment karma</th>
-                    <th scope="col">Post date</th>
-                    <th scope="col">Number of comments</th>
-                    <th scope="col">Number of votes</th>
-                    <th scope="col">Post category</th>
-                </tr>
-                </thead>
-                <PostsList posts={posts}
-                           page={page}
-                           perPage={perPage} />
-            </table>
-            <Pagination pages={pages}
-                        page={page}
-                        changePageFunc={changePageFunc}/>
-        </div>
-    )
+                    changePerPageFunc={this.changePerPageFunc}
+                    changeFiltersFunc={this.changeFiltersFunc} />
+                <table className="table table-striped">
+                    <thead>
+                    <tr className="table-primary">
+                        <th scope="col">Post number</th>
+                        <th scope="col">Username</th>
+                        <th scope="col">User karma</th>
+                        <th scope="col">User cake day</th>
+                        <th scope="col">Post karma</th>
+                        <th scope="col">Comment karma</th>
+                        <th scope="col">Post date</th>
+                        <th scope="col">Number of comments</th>
+                        <th scope="col">Number of votes</th>
+                        <th scope="col">Post category</th>
+                    </tr>
+                    </thead>
+                    <PostsList posts={posts}
+                               page={page}
+                               perPage={perPage} />
+                </table>
+                <Pagination pages={pages}
+                            page={page}
+                            changePageFunc={this.changePageFunc}/>
+            </div>
+        )
+    }
 
-};
-
-export default App
+}
