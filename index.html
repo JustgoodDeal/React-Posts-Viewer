@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <title>Posts Viewer</title>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
@@ -27,149 +27,228 @@
     </style>
 </head>
 <body>
-    <div role="main" id="root" class="container">
+    <div class="container">
+        <h1 class="text-center">Posts</h1>
+        <div class="mb-3 d-flex justify-content-center">
+            <div id="filters"></div>
+            <div id="per-page"></div>
+        </div>
+        <div id="posts-list"></div>
+        <div id="pagination"></div>
     </div>
     <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
+            crossorigin="anonymous"></script>
+
+    <script>
+        const redditApp = {};
+
+        redditApp.init = () => {
+
+            redditApp.loadPosts();
+
+        };
+
+        redditApp.state = {
+            posts: [],
+            pagination: {
+                page: 1,
+                pages: 1,
+                perPage: 25,
+            },
+            filters: {
+                postCategory: '',
+                postDate: '',
+                votesNumber: ''
+            }
+        };
+
+        redditApp.renderComponents = () => {
+            redditApp.renderPostsList();
+            redditApp.renderPagination();
+            redditApp.renderFilters()
+        };
+
+        redditApp.loadPosts = () => {
+            redditApp.PostsService.getPostsList()
+                .then((data) => {
+                    const {posts, page, pages} = data;
+                    let paginationCopy = Object.assign({}, redditApp.state.pagination);
+                    paginationCopy.page = page;
+                    paginationCopy.pages = pages;
+                    redditApp.state.pagination = paginationCopy;
+                    redditApp.state.posts = posts;
+                    redditApp.renderComponents();
+                })
+                .catch(() => {
+                    redditApp.state.posts = [];
+                    redditApp.state.pagination = {
+                        page: 1,
+                        pages: 1,
+                        perPage: 25,
+                    };
+                    redditApp.renderComponents();
+                })
+        };
+
+        redditApp.defineURL = () => {
+            const {pagination: {page, perPage}, filters} = redditApp.state;
+            let url = `http://localhost:8087/posts?page=${page}&per_page=${perPage}`;
+            const filterNameMap = {
+                postCategory: 'post_category',
+                postDate: 'post_date',
+                votesNumber: 'votes_number'
+            };
+            for (let filter in filters) {
+                let filterValue = filters[filter]
+                if (filterValue) {
+                    let getParam = `&${filterNameMap[filter]}=${filterValue}`
+                    url += getParam
+                }
+            }
+            return url
+        };
+
+        redditApp.onPageChange = (page) => {
+            let paginationCopy = Object.assign({}, redditApp.state.pagination);
+            paginationCopy.page = page;
+            redditApp.state.pagination = paginationCopy;
+            redditApp.loadPosts()
+        };
+
+        redditApp.onPostsPerPageChange = (perPage) => {
+            let paginationCopy = Object.assign({}, redditApp.state.pagination);
+            paginationCopy.page = 1;
+            paginationCopy.perPage = perPage;
+            redditApp.state.pagination = paginationCopy;
+            redditApp.loadPosts()
+        };
+
+        redditApp.onFiltersApply = ({postCategory, postDate, votesNumber}) => {
+            let paginationCopy = Object.assign({}, redditApp.state.pagination);
+            paginationCopy.page = 1;
+            redditApp.state.pagination = paginationCopy;
+            redditApp.state.filters = {
+                postCategory,
+                postDate,
+                votesNumber
+            };
+            redditApp.loadPosts()
+        };
+    </script>
+    <script>
+        redditApp.PostsService = {
+            getPostsList() {
+                const url = redditApp.defineURL();
+                return fetch(url)
+                    .then(res => res.json())
+                    .then(data => data)
+            }
+        };
+    </script>
     <script type="text/babel">
+        redditApp.PostsListItem = ({post, postNumber}) => {
+            const {
+                username, user_karma, user_cake_day, post_karma, comment_karma, post_date, comments_number,
+                votes_number, post_category
+            } = post;
 
-        const Header = () => {
             return (
-                <div className="header d-flex justify-content-center mt-2 mb-2">
-                    <h1>Posts</h1>
-                </div>
+                <tr>
+                    <th scope="row">{postNumber}</th>
+                    <td>{username}</td>
+                    <td>{user_karma}</td>
+                    <td>{user_cake_day}</td>
+                    <td>{post_karma}</td>
+                    <td>{comment_karma}</td>
+                    <td>{post_date}</td>
+                    <td>{comments_number}</td>
+                    <td>{votes_number}</td>
+                    <td>{post_category}</td>
+                </tr>
             );
         };
 
-
-        const FiltersBlock = ({ perPage, changePerPageFunc, changeFiltersFunc }) => {
-
-            const perPageCountChange = (event) => {
-                changePerPageFunc(Number(event.target.value));
-            };
-
-            return (
-                <div className="mb-3 d-flex justify-content-center">
-                    <FiltersPage
-                        changeFiltersFunc={changeFiltersFunc} />
-                    <div className="per-page d-flex align-items-center">
-                        <p className="mr-2">Posts per page: </p>
-                        <select className="form-select"
-                                value={String(perPage)}
-                                onChange={perPageCountChange}>
-                            <option value="10">10</option>
-                            <option value="15">15</option>
-                            <option value="20">20</option>
-                            <option value="25">25</option>
-                        </select>
-                    </div>
-
-                </div>
-            );
-
-        };
-
-
-        const FiltersPage = ({ changeFiltersFunc }) => {
-
-            const applyFilters = () => {
-                const postCategoryFilter = document.getElementById('post-category').value;
-                const postDateFilter = document.getElementById('post-date').value;
-                const votesNumberFilter = document.getElementById('votes-number').value;
-                const closeBtn = document.getElementById('close-modal');
-                closeBtn.click();
-                changeFiltersFunc({postCategoryFilter, postDateFilter, votesNumberFilter})
-            };
-
-            return (
-                <div className="filters-page">
-                    <button type="button" className="btn btn-success mr-5" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
-                        Choose filters
-                    </button>
-
-                    <div className="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false"
-                         tabIndex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-                        <div className="modal-dialog">
-                            <div className="modal-content">
-                                <div className="modal-header justify-content-center">
-                                    <h5 className="modal-title text-center" id="staticBackdropLabel">Available filters</h5>
-                                </div>
-                                <div className="modal-body">
-
-                                    <div className="input-group input-group-sm mb-3">
-                                        <span className="input-group-text">Post category</span>
-                                        <input type="text" id="post-category" className="form-control" aria-label="Sizing example input"/>
-                                    </div>
-                                    <div className="input-group input-group-sm mb-3">
-                                        <span className="input-group-text">Post date</span>
-                                        <input type="text" id="post-date" className="form-control" aria-label="Sizing example input"/>
-                                    </div>
-                                    <div className="input-group input-group-sm mb-3">
-                                        <span className="input-group-text">Number of votes</span>
-                                        <input type="text" id="votes-number" className="form-control" aria-label="Sizing example input"/>
-                                    </div>
-
-                                </div>
-                                <div className="modal-footer">
-                                    <button type="button" id="close-modal" className="btn btn-danger" data-bs-dismiss="modal">Cancel</button>
-                                    <button
-                                        type="button"
-                                        className="btn btn-success"
-                                        onClick={applyFilters} >
-                                        Apply filters
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )
-
-        };
-
-
-        const PostsList = ({ posts, page, perPage }) => {
-
+        redditApp.PostsList = ({posts, page, perPage}) => {
+            const {PostsListItem} = redditApp;
             let postNumber = (page - 1) * perPage;
 
-            const postsElements = posts.map((item) => {
-                const { unique_id, username, user_karma, user_cake_day, post_karma, comment_karma, post_date, comments_number,
-                    votes_number, post_category  } = item;
-
-                postNumber++;
-
-                return (
-                    <tr key={unique_id}>
-                        <th scope="row">{postNumber}</th>
-                        <td>{username}</td>
-                        <td>{user_karma}</td>
-                        <td>{user_cake_day}</td>
-                        <td>{post_karma}</td>
-                        <td>{comment_karma}</td>
-                        <td>{post_date}</td>
-                        <td>{comments_number}</td>
-                        <td>{votes_number}</td>
-                        <td>{post_category}</td>
-                    </tr>
-                );
-            });
-
             return (
-                <tbody>
-                {postsElements}
-                </tbody>
+                <table className="table table-striped">
+                    <thead>
+                    <tr className="table-primary">
+                        <th scope="col">Post number</th>
+                        <th scope="col">Username</th>
+                        <th scope="col">User karma</th>
+                        <th scope="col">User cake day</th>
+                        <th scope="col">Post karma</th>
+                        <th scope="col">Comment karma</th>
+                        <th scope="col">Post date</th>
+                        <th scope="col">Number of comments</th>
+                        <th scope="col">Number of votes</th>
+                        <th scope="col">Post category</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {
+                        posts.map((post) => {
+                            postNumber++;
+                            return (
+                                <PostsListItem
+                                    key={postNumber}
+                                    post={post}
+                                    postNumber={postNumber}
+                                />
+                            )
+                        })
+                    }
+                    </tbody>
+                </table>
             )
-
         };
 
+        redditApp.renderPostsList = () => {
+            const {PostsList} = redditApp;
+            const {posts, pagination: {page, perPage}} = redditApp.state;
 
-        const Pagination = ({ pages, page, changePageFunc }) => {
+            ReactDOM.render(
+                (
+                    <PostsList posts={posts}
+                               page={page}
+                               perPage={perPage}/>
+                ),
+                document.getElementById('posts-list')
+            );
+        };
+    </script>
+    <script type="text/babel">
+        redditApp.PostsPerPage = ({perPage}) => {
+            const onPerPageSelected = (event) => {
+                redditApp.onPostsPerPageChange(Number(event.target.value));
+            };
 
+            return (
+                <div className="per-page d-flex align-items-center">
+                    <p className="mr-2">Posts per page: </p>
+                    <select className="form-select"
+                            value={String(perPage)}
+                            onChange={onPerPageSelected}>
+                        <option value="10">10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                        <option value="25">25</option>
+                    </select>
+                </div>
+            )
+        };
+
+        redditApp.Pagination = ({pages, page}) => {
             let prevClassName = page > 1 ? "page-item" : "page-item disabled";
             const previous = <li key={0} className={prevClassName}>
                 <button className="page-link"
-                        onClick={() => changePageFunc(page - 1)} >
+                        onClick={() => redditApp.onPageChange(page - 1)}>
                     Previous
                 </button>
             </li>;
@@ -180,7 +259,7 @@
                 let itemClassName = num === page ? "page-item active" : "page-item";
                 let item = <li key={num} className={itemClassName}>
                     <button className="page-link"
-                            onClick={() => changePageFunc(num)} >
+                            onClick={() => redditApp.onPageChange(num)}>
                         {num}
                     </button>
                 </li>;
@@ -190,7 +269,7 @@
             let nextClassName = page !== pages ? "page-item" : "page-item disabled";
             const next = <li key={pages + 1} className={nextClassName}>
                 <button className="page-link"
-                        onClick={() => changePageFunc(page + 1)} >
+                        onClick={() => redditApp.onPageChange(page + 1)}>
                     Next
                 </button>
             </li>;
@@ -204,152 +283,124 @@
                     </ul>
                 </nav>
             )
-
         };
 
+        redditApp.renderPagination = () => {
+            const {Pagination, PostsPerPage} = redditApp;
+            const {pagination: {page, pages, perPage}} = redditApp.state;
 
-        class App extends React.Component {
+            ReactDOM.render(
+                (
+                    <PostsPerPage perPage={perPage}/>
+                ),
+                document.getElementById('per-page')
+            );
+            ReactDOM.render(
+                (
+                    <Pagination pages={pages}
+                                page={page}/>
+                ),
+                document.getElementById('pagination')
+            );
+        };
+    </script>
+    <script type="text/babel">
+        redditApp.Filters = class extends React.Component {
+            state = this.props.filters;
 
-            state = {
-                posts: [],
-                pagination: {
-                    page: 1,
-                    pages: 1,
-                    perPage: 25,
-                },
-                filters: {
-                    postCategoryFilter: '',
-                    postDateFilter: '',
-                    votesNumberFilter: ''
-                }
-            };
-
-            defineURL = () => {
-                const { pagination: { page, perPage }, filters } = this.state;
-                let url = `http://localhost:8087/posts?page=${page}&per_page=${perPage}`;
-                const filterNameMap = {
-                    postCategoryFilter: 'post_category',
-                    postDateFilter: 'post_date',
-                    votesNumberFilter: 'votes_number'
-                };
-                for (let filter in filters) {
-                    let filterValue = filters[filter]
-                    if (filterValue) {
-                        let getParam = `&${filterNameMap[filter]}=${filterValue}`
-                        url += getParam
-                    }
-                }
-                return url
-            };
-
-            getPostsList = () => {
-                const url = this.defineURL();
-                fetch(url)
-                    .then(res => res.json())
-                    .then(data => {
-                        const { posts, page, pages } = data;
-                        this.setState(({ pagination }) => {
-                            let paginationCopy = Object.assign({}, pagination);
-                            paginationCopy.page = page;
-                            paginationCopy.pages = pages;
-                            return {
-                                posts,
-                                pagination: paginationCopy
-                            }
-                        });
-                    })
-                    .catch(() => this.setState({posts:[]}))
-            };
-
-            componentDidMount() {
-                this.getPostsList()
-            }
-
-            componentDidUpdate(prevProps, prevState) {
-                if (prevState.pagination.page !== this.state.pagination.page ||
-                    prevState.pagination.perPage !== this.state.pagination.perPage ||
-                    JSON.stringify(prevState.filters) !== JSON.stringify(this.state.filters)) {
-                    this.getPostsList()
-                }
-            }
-
-            changePageFunc = (page) => {
-                this.setState(({ pagination }) => {
-                    let paginationCopy = Object.assign({}, pagination);
-                    paginationCopy.page = page;
-                    return {
-                        pagination: paginationCopy
-                    }
-                });
-            };
-
-            changePerPageFunc = (perPage) => {
-                this.setState(({ pagination }) => {
-                    let paginationCopy = Object.assign({}, pagination);
-                    paginationCopy.page = 1;
-                    paginationCopy.perPage = perPage;
-                    return {
-                        pagination: paginationCopy
-                    }
-                });
-            };
-
-            changeFiltersFunc = ({ postCategoryFilter, postDateFilter, votesNumberFilter }) => {
-                this.setState(({ pagination }) => {
-                    let paginationCopy = Object.assign({}, pagination);
-                    paginationCopy.page = 1;
-                    return {
-                        pagination: paginationCopy,
-                        filters: {
-                            postCategoryFilter,
-                            postDateFilter,
-                            votesNumberFilter
-                        }
-                    }
+            handleChange = (event) => {
+                let value = event.target.value;
+                this.setState({
+                    [event.target.name]: value,
                 });
             };
 
             render() {
-                const { posts, pagination: { page, pages, perPage } } = this.state;
+                const {postCategory, postDate, votesNumber} = this.state;
 
                 return (
-                    <div>
-                        <Header />
-                        <FiltersBlock
-                            perPage={perPage}
-                            changePerPageFunc={this.changePerPageFunc}
-                            changeFiltersFunc={this.changeFiltersFunc} />
-                        <table className="table table-striped">
-                            <thead>
-                            <tr className="table-primary">
-                                <th scope="col">Post number</th>
-                                <th scope="col">Username</th>
-                                <th scope="col">User karma</th>
-                                <th scope="col">User cake day</th>
-                                <th scope="col">Post karma</th>
-                                <th scope="col">Comment karma</th>
-                                <th scope="col">Post date</th>
-                                <th scope="col">Number of comments</th>
-                                <th scope="col">Number of votes</th>
-                                <th scope="col">Post category</th>
-                            </tr>
-                            </thead>
-                            <PostsList posts={posts}
-                                       page={page}
-                                       perPage={perPage} />
-                        </table>
-                        <Pagination pages={pages}
-                                    page={page}
-                                    changePageFunc={this.changePageFunc} />
+                    <div className="filters-page">
+                        <button type="button" className="btn btn-success mr-5" data-bs-toggle="modal"
+                                data-bs-target="#staticBackdrop">
+                            Choose filters
+                        </button>
+                        <div className="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false"
+                             tabIndex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+                            <div className="modal-dialog">
+                                <div className="modal-content">
+                                    <div className="modal-header justify-content-center">
+                                        <h5 className="modal-title text-center" id="staticBackdropLabel">Available
+                                            filters</h5>
+                                    </div>
+                                    <div className="modal-body">
+
+                                        <div className="input-group input-group-sm mb-3">
+                                            <span className="input-group-text">Post category</span>
+                                            <input type="text"
+                                                   name="postCategory"
+                                                   className="form-control"
+                                                   aria-label="Sizing example input"
+                                                   defaultValue={postCategory}
+                                                   onChange={this.handleChange}/>
+                                        </div>
+                                        <div className="input-group input-group-sm mb-3">
+                                            <span className="input-group-text">Post date</span>
+                                            <input type="text"
+                                                   name="postDate"
+                                                   className="form-control"
+                                                   aria-label="Sizing example input"
+                                                   defaultValue={postDate}
+                                                   onChange={this.handleChange}/>
+                                        </div>
+                                        <div className="input-group input-group-sm mb-3">
+                                            <span className="input-group-text">Number of votes</span>
+                                            <input type="text"
+                                                   name="votesNumber"
+                                                   className="form-control"
+                                                   aria-label="Sizing example input"
+                                                   defaultValue={votesNumber}
+                                                   onChange={this.handleChange}/>
+                                        </div>
+
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button type="button" className="btn btn-danger" data-bs-dismiss="modal">Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            id="apply-filters"
+                                            className="btn btn-success"
+                                            data-bs-dismiss="modal"
+                                            onClick={() => redditApp.onFiltersApply(this.state)}>
+                                            Apply filters
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )
             }
+        };
 
-        }
+        redditApp.renderFilters = () => {
+            const {Filters} = redditApp;
 
-        ReactDOM.render(<App />,
-            document.getElementById('root'));
+            ReactDOM.render(
+                (
+                    <Filters
+                        filters={redditApp.state.filters}
+                    />
+                ),
+                document.getElementById('filters')
+            );
+        };
 
+    </script>
+    <script>
+        window.addEventListener('load', () => {
+            redditApp.init();
+        });
     </script>
 </body>
 </html>
